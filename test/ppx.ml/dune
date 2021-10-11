@@ -4,6 +4,7 @@
 ;  (modules test)
 ;  (preprocess
 ;   (pps ppx_effects)))
+
 (executable
  (name pp)
  (modules pp)
@@ -11,14 +12,19 @@
 
 (rule
  (targets test.actual.ml)
- (deps (:pp pp.exe) (:input test.ml))
- (action (run ./%{pp} --impl %{input} -o %{targets})))
+ (deps
+  (:pp pp.exe)
+  (:input test.ml))
+ (action
+  (run ./%{pp} --impl %{input} -o %{targets})))
 
-(rule 
+(rule
  (alias runtest)
- (action (diff test.expected.ml test.actual.ml)))
+ (action
+  (diff test.expected.ml test.actual.ml)))
 
- (test
-  (name test)
-  (modules test)
-  (preprocess (pps ppx_effects)))
+(test
+ (name test)
+ (modules test)
+ (preprocess
+  (pps ppx_effects)))

@@ -13,13 +13,13 @@ let extension =
            nil
         ^:: nil))
     (fun ~loc ~path:_ effect_construct input_type output_type ->
-      print_endline "weee";
       let eff_name =
         match effect_construct with Lident z -> z | _ -> failwith "uhoh"
       in
+      let effsym = ptyp_constr ~loc (Loc.make ~loc (Lident "eff")) in
       pstr_typext ~loc
       @@ type_extension ~loc
-           ~path:(Loc.make ~loc @@ Lident "eff")
+           ~path:(Loc.make ~loc @@ Lident "eff") (* ~params:(ptyp_any ~loc) *)
            ~params:[ (ptyp_any ~loc, (NoVariance, Injective)) ]
            ~constructors:
              [
@@ -29,11 +29,13 @@ let extension =
                       (* super wrong ... i need to recurse on input & output types of the Pext_decl and generate correct ... stuff *)
                       ( Pcstr_tuple
                           [ ptyp_constr ~loc (Loc.make ~loc input_type) [] ],
-                        Some (ptyp_constr ~loc (Loc.make ~loc output_type) [])
+                        Some
+                          (effsym
+                             [ ptyp_constr ~loc (Loc.make ~loc output_type) [] ])
                       ));
              ]
            ~private_:Public)
 
 let rule = Context_free.Rule.extension extension
-let () = print_endline "weeeeeeee";
-  Driver.register_transformation ~rules:[ rule ] "effect"
+
+let () = Driver.register_transformation ~rules:[ rule ] "effect"
