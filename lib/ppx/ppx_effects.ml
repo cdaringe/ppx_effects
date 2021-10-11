@@ -1,23 +1,39 @@
 (* https://tarides.com/blog/2019-05-09-an-introduction-to-ocaml-ppx-ecosystem *)
 open Ppxlib
+open Ast_builder.Default
 
 let extension =
-  Extension.declare_inline
-    "effect"
-    Ppxlib.Extension.Context.Structure_item
-    Ast_pattern.(single_expr_payload (pexp_construct __ __))
-    (* The type for Ast_pattern is defined as ('a, 'b, 'c) t where 'a is the type of AST nodes that are matched, 'b is the type of the values you're extracting from the node as a function type and 'c is the return type of that last function. *)
-    (fun ~loc ~path l ->
-      (* Ast_builder.Default.psig *)
-      (* Parsetree.PStr (Pty)
-        structure_item_desc = Some;
-        pstr_loc = loc;
-      }) *)
-      (* let builder = Ast_builder.make loc in
-       *)
-    )
+  Extension.declare "effect" Ppxlib.Extension.Context.Structure_item
+    Ast_pattern.(
+      pstr
+        (pstr_eval
+           (pexp_tuple
+              (pexp_construct __ none ^:: pexp_ident __ ^:: pexp_ident __
+             ^:: nil))
+           nil
+        ^:: nil))
+    (fun ~loc ~path:_ effect_construct input_type output_type ->
+      print_endline "weee";
+      let eff_name =
+        match effect_construct with Lident z -> z | _ -> failwith "uhoh"
+      in
+      pstr_typext ~loc
+      @@ type_extension ~loc
+           ~path:(Loc.make ~loc @@ Lident "eff")
+           ~params:[ (ptyp_any ~loc, (NoVariance, Injective)) ]
+           ~constructors:
+             [
+               extension_constructor ~loc ~name:(Loc.make ~loc eff_name)
+                 ~kind:
+                   (Pext_decl
+                      (* super wrong ... i need to recurse on input & output types of the Pext_decl and generate correct ... stuff *)
+                      ( Pcstr_tuple
+                          [ ptyp_constr ~loc (Loc.make ~loc input_type) [] ],
+                        Some (ptyp_constr ~loc (Loc.make ~loc output_type) [])
+                      ));
+             ]
+           ~private_:Public)
 
 let rule = Context_free.Rule.extension extension
-
-let () =
-  Driver.register_transformation ~rules:[rule] "my_transformation"
+let () = print_endline "weeeeeeee";
+  Driver.register_transformation ~rules:[ rule ] "effect"

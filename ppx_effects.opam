@@ -7,8 +7,8 @@ description:
 maintainer: ["cdaringe@gmail.com"]
 authors: ["Christopher Dienringer"]
 license: "ISC"
-homepage: "https://github.com/cdaringe/effects_ppx"
-bug-reports: "https://github.com/cdaringe/effects_ppx/issues"
+homepage: "https://github.com/cdaringe/ppx_effects"
+bug-reports: "https://github.com/cdaringe/ppx_effects/issues"
 depends: [
   "alcotest" {with-test}
   "dune" {>= "2.9" & > "2.8"}
@@ -32,4 +32,4 @@ build: [
   ]
   ["dune" "install" "-p" name "--create-install-files" name]
 ]
-dev-repo: "git+https://github.com/cdaringe/effects_ppx.git"
+dev-repo: "git+https://github.com/cdaringe/ppx_effects.git"

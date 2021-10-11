@@ -1,13 +1,13 @@
 (lang dune 2.9)
 (generate_opam_files true)
-(name effects_ppx)
+(name ppx_effects)
 (version 0.0.1)
-(source (github cdaringe/effects_ppx))
+(source (github cdaringe/ppx_effects))
 (license ISC)
 (authors "Christopher Dienringer")
 (maintainers "cdaringe@gmail.com")
 (package
- (name effects_ppx)
+ (name ppx_effects)
  (synopsis "Ppx for ocaml effects using function implementation")
  (description "Ppx for ocaml effects using function implementation. do not use if your compiler supports first class effects syntax")
  (depends
