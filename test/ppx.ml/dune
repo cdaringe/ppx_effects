@@ -14,9 +14,11 @@
  (targets test.actual.ml)
  (deps
   (:pp pp.exe)
-  (:input test.ml))
+  ; (:input test.ml)
+  )
  (action
-  (run ./%{pp} --impl %{input} -o %{targets})))
+  ; (run ./%{pp} --impl %{input} -o %{targets} && rad format)))
+  (run ./%{pp} --impl test.ml -o %{targets})))
 
 (rule
  (alias runtest)
