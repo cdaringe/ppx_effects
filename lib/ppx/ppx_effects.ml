@@ -49,9 +49,6 @@ let continue_ident ~loc =
 let continuation_ident ~loc =
   loca ~loc @@ Ppxlib.Longident.parse "Obj.Effect_handlers.Deep.continuation"
 
-let var_try_with_private ~loc =
-  ppat_var ~loc (loca ~loc "__ppx_effects_try_with")
-
 let invoke_try_with_effects ~loc ~comp ~arg ~handler_record =
   let try_with = pexp_ident ~loc (try_with_ident ~loc) in
   pexp_apply ~loc try_with

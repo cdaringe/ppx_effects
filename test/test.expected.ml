@@ -6,11 +6,11 @@ type !_ eff += B : unit -> unit eff
 
 type !_ eff += C : string -> string eff
 
-let comp () =
+let comp on_complete =
   perform @@ B ();
   let c_out = perform @@ C "c_input" in
   perform @@ A c_out;
-  ()
+  on_complete ()
 
 let () =
   let handle_a s continue k =
@@ -25,7 +25,8 @@ let () =
     print_endline @@ "handling c with: " ^ s;
     continue k "c_output"
   in
-  Obj.Effect_handlers.Deep.try_with comp ()
+  let on_complete () = print_endline "all_done!" in
+  Obj.Effect_handlers.Deep.try_with comp on_complete
     {
       effc =
         (fun (type a) (e : a eff) ->
