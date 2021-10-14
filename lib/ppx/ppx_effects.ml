@@ -2,23 +2,6 @@
 open Ppxlib
 open Ast_builder.Default
 
-(* type z = Parsetree.t
-   type l = Longident.t *)
-
-(* let expr_to_core = function
-   | Ptyp_any -> ptyp_any
-   | Ptyp_var v -> ptyp_var v
-   | Ptyp_arrow (a,b,c) -> ptyp_arrow a b c
-   | Ptyp_tuple ctl -> ptyp_tuple ctl
-   | Ptyp_constr (a,b) -> ptyp_constr a b
-   | Ptyp_object (object_field_list, closed_flag) -> ptyp_object object_field_list closed_flag
-   | Ptyp_class (lloc, ctl) -> ptyp_class lloc ctl
-   | Ptyp_alias (ct, s) -> ptyp_alias ct s
-   | Ptyp_variant (a,b,c) -> ptyp_variant a b c
-   | Ptyp_poly (sll, ct) -> ptyp_poly sll ct
-   | Ptyp_package pt -> ptyp_package pt
-   | Ptyp_extension extension -> ptyp_extension extension *)
-
 let effect_keyword_extension =
   Extension.declare "effect" Ppxlib.Extension.Context.Structure_item
     Ast_pattern.(
@@ -31,7 +14,9 @@ let effect_keyword_extension =
         ^:: nil))
     (fun ~loc ~path:_ effect_construct input_type output_type ->
       let eff_name =
-        match effect_construct with Lident z -> z | _ -> failwith "uhoh"
+        match effect_construct with
+        | Lident z -> z
+        | _ -> failwith "you shouldn't be using this"
       in
       let effsym = ptyp_constr ~loc (Loc.make ~loc (Lident "eff")) in
       pstr_typext ~loc
@@ -61,73 +46,112 @@ let try_with_ident ~loc =
 let continue_ident ~loc =
   loca ~loc @@ Ppxlib.Longident.parse "Obj.Effect_handlers.Deep.continue"
 
+let continuation_ident ~loc =
+  loca ~loc @@ Ppxlib.Longident.parse "Obj.Effect_handlers.Deep.continuation"
+
 let var_try_with_private ~loc =
   ppat_var ~loc (loca ~loc "__ppx_effects_try_with")
 
-let var_continue_private ~loc =
-  ppat_var ~loc (loca ~loc "__ppx_effects_continue")
-
-let assign_continue ~loc expr =
-  pexp_let ~loc Nonrecursive
-    [
-      value_binding ~loc
-        ~pat:(var_continue_private ~loc)
-        ~expr:(pexp_ident ~loc (continue_ident ~loc));
-    ]
-    expr
-
-let assign_try_with ~loc expr =
-  pexp_let ~loc Nonrecursive
-    [
-      value_binding ~loc
-        ~pat:(var_try_with_private ~loc)
-        ~expr:(pexp_ident ~loc (try_with_ident ~loc));
-    ]
-    expr
-
-let with_effects_refs ~loc expr =
-  expr |> assign_continue ~loc |> assign_try_with ~loc
-
-let invoke_try_with_effects ~loc ~(comp) ~arg ~handler_record =
+let invoke_try_with_effects ~loc ~comp ~arg ~handler_record =
   let try_with = pexp_ident ~loc (try_with_ident ~loc) in
-  with_effects_refs ~loc
-  @@ pexp_apply ~loc try_with
-       [ (Nolabel, comp); (Nolabel, arg); (Nolabel, handler_record) ]
+  pexp_apply ~loc try_with
+    [ (Nolabel, comp); (Nolabel, arg); (Nolabel, handler_record) ]
 
-let to_handler_record_kv ~loc handler = 1
-let non_with_record = None
-let to_effc_handler_record ~loc handlers = pexp_record ~loc (List.map (to_handler_record_kv ~loc) handlers) non_with_record
+let some ~loc expr = pexp_construct ~loc (loca ~loc (lident "Some")) expr
+
+let none ~loc = pexp_construct ~loc (loca ~loc (lident "None")) None
+
+let lident_l_of_str ~loc v = loca ~loc (Longident.Lident v)
+
+(*
+Convert the ppx syntax: 
+  (E1 handle_e1) 
+
+Into:
+  E1 x -> Some (fun (k : (a, _) continuation) -> handle_e1 x continue k) 
+  *)
+let to_effect_handler_match_case ~loc (handler : longident * label) =
+  let eff_constructor_lident, handler_name = handler in
+  let lhs_ident = loca ~loc eff_constructor_lident in
+  let lhs =
+    ppat_construct ~loc lhs_ident (Some (ppat_var ~loc (loca ~loc "x")))
+  in
+  (* (k : (a, _) *)
+  let a_constr = ptyp_constr ~loc (lident_l_of_str ~loc "a") [] in
+  let rhs_constraint =
+    ppat_constraint ~loc
+      (ppat_var ~loc (loca ~loc "k"))
+      (ptyp_constr ~loc (continuation_ident ~loc) [ a_constr; ptyp_any ~loc ])
+  in
+  let rhs_apply_fn =
+    pexp_apply ~loc
+      (pexp_ident ~loc @@ lident_l_of_str ~loc handler_name)
+      [
+        (Nolabel, pexp_ident ~loc (lident_l_of_str ~loc "x"));
+        (Nolabel, pexp_ident ~loc (continue_ident ~loc));
+        (Nolabel, pexp_ident ~loc (lident_l_of_str ~loc "k"));
+      ]
+  in
+  let rhs_lambda = pexp_fun ~loc Nolabel None rhs_constraint rhs_apply_fn in
+  let rhs = some ~loc @@ Some rhs_lambda in
+  case ~lhs ~guard:None ~rhs
+
+let case_match_none ~loc =
+  case ~lhs:(ppat_any ~loc) ~guard:None ~rhs:(none ~loc)
+
+let simple_record = None
+
+type handler_list = (longident * label) list
+
+let to_effc_handler_record ~loc (handlers : handler_list) =
+  let match_effect_cases =
+    List.map (to_effect_handler_match_case ~loc) handlers
+    @ [ case_match_none ~loc ]
+  in
+  let match_arg = pexp_ident ~loc @@ lident_l_of_str ~loc "e" in
+  let match_effects = pexp_match ~loc match_arg match_effect_cases in
+  let effc_fn =
+    pexp_newtype ~loc (loca ~loc "a")
+    @@ pexp_fun ~loc Nolabel None
+         (ppat_constraint ~loc
+            (ppat_var ~loc (loca ~loc "e"))
+            (ptyp_constr ~loc
+               (lident_l_of_str ~loc "eff")
+               [ ptyp_constr ~loc (lident_l_of_str ~loc "a") [] ]))
+         match_effects
+  in
+  let effc_entry = (lident_l_of_str ~loc "effc", effc_fn) in
+  pexp_record ~loc [ effc_entry ] simple_record
 
 let extract_eff_and_handler = function
   | {
-      pexp_desc = Parsetree.Pexp_construct (
-        {txt = effect_name; _; },
-        Some {
-          pexp_desc = Pexp_ident {txt = Lident handler; _ };
-          _; 
-        }
-      );
+      pexp_desc =
+        Parsetree.Pexp_construct
+          ( { txt = effect_name; _ },
+            Some { pexp_desc = Pexp_ident { txt = Lident handler_name; _ }; _ }
+          );
       _;
-   } -> effect_name, handler
+    } ->
+      (effect_name, handler_name)
   | _ -> failwith "invalid hanler entry"
+
 let with_effects_keyword_extension =
   Extension.declare "with_effects" Ppxlib.Extension.Context.Expression
-    Ast_pattern.(pstr (pstr_eval (pexp_apply (pexp_ident __) __) nil ^:: nil))
+    Ast_pattern.(pstr (pstr_eval (pexp_apply __ __) nil ^:: nil))
     (fun ~loc ~path:_ comp params ->
-      let (arg, handlers) = match params with
-        | [(Nolabel, {
-          pexp_desc = Pexp_construct (arg, None);
-          _
-          });(Nolabel, {pexp_desc =
-          Pexp_array handler_pexp_constructs; _ })] -> (arg, List.map extract_eff_and_handler handler_pexp_constructs)
-        | _ -> failwith "supported args: <how to pretty print AST programatically?>" (* Ppxlib_ast.Pprintast.expression *)   in
-      let open_in_effects_handlers_deep expr =
-        let ed_mod_ident =
-          pmod_ident ~loc (loca ~loc @@ lident "Obj.Effect_handlers.Deep")
-        in
-        pexp_open ~loc (open_infos ~loc ~expr:ed_mod_ident ~override:Fresh) expr
+      let arg, handlers =
+        match params with
+        | [
+         (Nolabel, arg);
+         (Nolabel, { pexp_desc = Pexp_array handler_pexp_constructs; _ });
+        ] ->
+            (arg, List.map extract_eff_and_handler handler_pexp_constructs)
+        | _ ->
+            failwith
+              "supported args: <how to pretty print AST programatically?>"
       in
-      invoke_try_with_effects ~loc ~comp ~arg ~handler_record:(to_effc_handler_record ~loc handlers)
+      invoke_try_with_effects ~loc ~comp ~arg
+        ~handler_record:(to_effc_handler_record ~loc handlers))
 
 let effect_rule = Context_free.Rule.extension effect_keyword_extension
 
@@ -137,4 +161,4 @@ let with_effects_rules =
 let () =
   Driver.register_transformation
     ~rules:[ effect_rule; with_effects_rules ]
-    "effect"
+    "effects"
