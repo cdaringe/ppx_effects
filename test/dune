@@ -13,6 +13,12 @@
   (pps ppx_effects)))
 
 (rule
+ (deps pp.exe)
+ (target test.actual.ml)
+ (action
+  (with-stdout-to test.actual.ml (run ./pp.exe "test.ml"))))
+
+(rule
  (alias runtest)
  (action
   (diff test.expected.ml test.actual.ml)))
