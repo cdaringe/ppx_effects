@@ -20,6 +20,10 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
       - run: opam install ./ppx_effects.opam --deps-only --with-test --working-dir
+      # https://github.com/denolib/setup-deno
+      - uses: denolib/setup-deno@master
+        with:
+          deno-version: 1.13.2
       - run: deno install --unstable -f -A -n rad https://raw.githubusercontent.com/cdaringe/rad/v6.7.1/src/bin.ts && rad -l info formatCheck && rad -l info test
       # - run: opam exec -- dune build
       # - run: opam exec -- dune runtest
