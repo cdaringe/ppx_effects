@@ -12,6 +12,7 @@ bug-reports: "https://github.com/cdaringe/ppx_effects/issues"
 depends: [
   "alcotest" {with-test}
   "dune" {>= "2.9" & > "2.8" & with-test}
+  "ocamlformat" {with-test}
   "ppx_tools" {> "6"}
   "ppxlib" {>= "0.22.0"}
   "odoc" {with-doc}

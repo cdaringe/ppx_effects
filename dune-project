@@ -13,6 +13,7 @@
  (depends
   (alcotest :with-test)
   (dune (and (> 2.8) :with-test))
+  (ocamlformat :with-test)
   (ppx_tools (> 6))
   (ppxlib (>= 0.22.0))
   ; (foo (and :dev (> 1.5) (< 2.0)))

@@ -8,17 +8,17 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest] #, macos-latest, windows-latest]
-        ocaml-version:
+        ocaml-compiler:
           - 4.12+0+domains
     steps:
       - name: Install native deps
         run: sudo apt-get install -y libev-dev
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Use OCaml ${{ matrix.ocaml-version }}
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: avsm/setup-ocaml@v2
         with:
-          ocaml-version: ${{ matrix.ocaml-version }}
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
       - run: opam install ./ppx_effects.opam --deps-only --with-test --working-dir
       # https://github.com/denolib/setup-deno
       - uses: denolib/setup-deno@master
