@@ -1,4 +1,4 @@
-open Obj.Effect_handlers
+open EffectHandlers
 
 type !_ eff += A : string -> unit eff
 
@@ -13,35 +13,36 @@ let comp on_complete =
   on_complete ()
 
 let () =
-  let handle_a s continue k =
+  let handle_a s k =
     print_endline @@ "handling a with: " ^ s;
-    continue k ()
+    EffectHandlers.Deep.continue k ()
   in
-  let handle_b _ continue k =
+  let handle_b _ k =
     print_endline "handling b";
-    continue k ()
+    EffectHandlers.Deep.continue k ()
   in
-  let handle_c s continue k =
+  let handle_c s k =
     print_endline @@ "handling c with: " ^ s;
-    continue k "c_output"
+    EffectHandlers.Deep.continue k "c_output"
   in
   let on_complete () = print_endline "all_done!" in
-  Obj.Effect_handlers.Deep.try_with comp on_complete
+  EffectHandlers.Deep.try_with
+    (fun () -> comp on_complete)
+    ()
     {
       effc =
-        (fun (type a) (e : a eff) ->
-          match e with
-          | A x ->
+        (fun (type a) -> function
+          | (A s : a eff) ->
               Some
-                (fun (k : (a, _) Obj.Effect_handlers.Deep.continuation) ->
-                  handle_a x Obj.Effect_handlers.Deep.continue k)
-          | B x ->
+                (fun (k : (a, _) EffectHandlers.Deep.continuation) ->
+                  handle_a s k)
+          | (B s : a eff) ->
               Some
-                (fun (k : (a, _) Obj.Effect_handlers.Deep.continuation) ->
-                  handle_b x Obj.Effect_handlers.Deep.continue k)
-          | C x ->
+                (fun (k : (a, _) EffectHandlers.Deep.continuation) ->
+                  handle_b s k)
+          | (C s : a eff) ->
               Some
-                (fun (k : (a, _) Obj.Effect_handlers.Deep.continuation) ->
-                  handle_c x Obj.Effect_handlers.Deep.continue k)
+                (fun (k : (a, _) EffectHandlers.Deep.continuation) ->
+                  handle_c s k)
           | _ -> None);
     }

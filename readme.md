@@ -3,12 +3,13 @@
 Allows one to write effects via concise syntax via ppx:
 
 ```ml
-let comp = (* perform (A input) *)
-let () =
-  let handle_a s continue k = continue k () in
-  let handle_b _ continue k = continue k ()
-  [%with_effects comp () [| A handle_a; B handle_b; |]]
+try%effect comp on_complete with
+  | A (input_a, k) -> handle_a input_a k
+  | B (input_b, k) -> handle_b input_b k
+  | C (input_c, k) -> handle_c input_c k
 ```
+
+See a full example in [test/test.ml](./test/test.ml).
 
 ## install
 

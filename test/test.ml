@@ -1,4 +1,4 @@
-open Obj.Effect_handlers
+open EffectHandlers
 
 [%%effect A, string, unit]
 
@@ -13,17 +13,20 @@ let comp on_complete =
   on_complete ()
 
 let () =
-  let handle_a s continue k =
+  let handle_a s k =
     print_endline @@ "handling a with: " ^ s;
-    continue k ()
+    EffectHandlers.Deep.continue k ()
   in
-  let handle_b _ continue k =
+  let handle_b _ k =
     print_endline "handling b";
-    continue k ()
+    EffectHandlers.Deep.continue k ()
   in
-  let handle_c s continue k =
+  let handle_c s k =
     print_endline @@ "handling c with: " ^ s;
-    continue k "c_output"
+    EffectHandlers.Deep.continue k "c_output"
   in
   let on_complete () = print_endline "all_done!" in
-  [%with_effects comp on_complete [| A handle_a; B handle_b; C handle_c |]]
+  try%effect comp on_complete with
+  | A (s, k) -> handle_a s k
+  | B (s, k) -> handle_b s k
+  | C (s, k) -> handle_c s k

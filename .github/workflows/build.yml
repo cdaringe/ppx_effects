@@ -1,0 +1,36 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        include:
+          - os: ubuntu-latest
+            ocaml-compiler: ocaml-variants.4.12.0+domains
+            opam-repositories: |
+              multicore: https://github.com/ocaml-multicore/multicore-opam.git
+              default: https://github.com/ocaml/opam-repository.git
+            cache: true
+    steps:
+      - name: Install native deps
+        run: sudo apt-get install -y libev-dev
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          ocaml-repositories: ${{ matrix.ocaml-repositories }}
+      - run: opam install ./ppx_effects.opam --deps-only --with-test --working-dir
+      # https://github.com/denolib/setup-deno
+      - uses: denolib/setup-deno@master
+        with:
+          deno-version: 1.13.2
+      - run: deno install --unstable -f -A -n rad https://raw.githubusercontent.com/cdaringe/rad/v6.7.1/src/bin.ts && rad -l info formatCheck && rad -l info test
+      # - run: opam exec -- dune build
+      # - run: opam exec -- dune runtest
