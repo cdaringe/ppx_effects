@@ -44,13 +44,13 @@ let effect_keyword_extension =
 let loca ~loc v = Loc.make ~loc v
 
 let try_with_ident ~loc =
-  loca ~loc @@ Ppxlib.Longident.parse "Obj.Effect_handlers.Deep.try_with"
+  loca ~loc @@ Ppxlib.Longident.parse "Effect_handlers.Deep.try_with"
 
 let continue_ident ~loc =
-  loca ~loc @@ Ppxlib.Longident.parse "Obj.Effect_handlers.Deep.continue"
+  loca ~loc @@ Ppxlib.Longident.parse "Effect_handlers.Deep.continue"
 
 let continuation_ident ~loc =
-  loca ~loc @@ Ppxlib.Longident.parse "Obj.Effect_handlers.Deep.continuation"
+  loca ~loc @@ Ppxlib.Longident.parse "Effect_handlers.Deep.continuation"
 
 let invoke_try_with_effects ~loc ~comp ~arg ~handler_record =
   let try_with = pexp_ident ~loc (try_with_ident ~loc) in
