@@ -19,7 +19,7 @@ jobs:
         uses: avsm/setup-ocaml@v2
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
-      - run: opam install ./ppx_effects.opam --deps-only --with-dev --working-dir
-      - run: deno install --unstable -f -A -n rad https://raw.githubusercontent.com/cdaringe/rad/v6.7.0/src/bin.ts && rad -l format && rad -l info test
+      - run: opam install ./ppx_effects.opam --deps-only --with-test --working-dir
+      - run: deno install --unstable -f -A -n rad https://raw.githubusercontent.com/cdaringe/rad/v6.7.1/src/bin.ts && rad -l info formatCheck && rad -l info test
       # - run: opam exec -- dune build
       # - run: opam exec -- dune runtest
