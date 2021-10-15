@@ -12,7 +12,7 @@
  (preprocess
   (pps ppx_effects)))
 
-;(rule
+; (rule
 ; (deps pp.exe)
 ; (target test.actual.ml)
 ; (mode promote)
