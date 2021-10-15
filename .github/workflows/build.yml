@@ -7,18 +7,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest] #, macos-latest, windows-latest]
-        ocaml-compiler: ocaml-variants.4.12.0+domains
-        opam-repositories: |
-          multicore: https://github.com/ocaml-multicore/multicore-opam.git
-          default: https://github.com/ocaml/opam-repository.git
+        os:
+          - ubuntu-latest
+        include:
+          - os: ubuntu-latest
+            ocaml-compiler: ocaml-variants.4.12.0+domains
+            opam-repositories: |
+              multicore: https://github.com/ocaml-multicore/multicore-opam.git
+              default: https://github.com/ocaml/opam-repository.git
+            cache: true
     steps:
       - name: Install native deps
         run: sudo apt-get install -y libev-dev
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: avsm/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           ocaml-repositories: ${{ matrix.ocaml-repositories }}
