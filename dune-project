@@ -12,7 +12,7 @@
  (description "Ppx for ocaml effects using function implementation. do not use if your compiler supports first class effects syntax")
  (depends
   (alcotest :with-test)
-  (dune (> 2.8))
+  (dune (and (> 2.8) :with-test))
   (ppx_tools (> 6))
   (ppxlib (>= 0.22.0))
   ; (foo (and :dev (> 1.5) (< 2.0)))
